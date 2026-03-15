@@ -214,15 +214,15 @@ class MeowQuotesPlugin(Star):
                 async with session.get(self.github_repo_url) as response:
                     if response.status == 200:
                         data = await response.json()
-                        import base64
+                        # 解码base64内容喵~
                         content = base64.b64decode(data['content']).decode('utf-8')
                         
-                        # 解析数据
+                        # 解析数据喵~
                         start = content.find('[')
                         end = content.rfind(']')
                         if start != -1 and end != -1:
                             array_content = content[start:end+1]
-                            import ast
+                            # 解析数组内容喵~
                             quotes = ast.literal_eval(array_content)
                             return quotes
         except Exception as e:
