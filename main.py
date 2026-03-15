@@ -18,11 +18,13 @@ import asyncio
 import random
 import aiohttp
 import json
+import ast
+import base64
 from pathlib import Path
 from datetime import datetime, timedelta
 
 from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star
+from astrbot.api.star import Context, Star, StarTools
 from astrbot.api import logger
 
 
@@ -40,6 +42,8 @@ class MeowQuotesPlugin(Star):
         
         # 数据目录
         self.data_dir = Path(__file__).parent
+        # 使用框架提供的数据目录存储动态数据
+        self.dynamic_data_dir = StarTools.get_data_dir(self)
         
         # 喵言喵语数据
         self.meow_quotes = []
@@ -49,7 +53,10 @@ class MeowQuotesPlugin(Star):
         self.update_interval = timedelta(hours=1)  # 每小时检查一次更新
         # 使用国内加速站访问GitHub API
         self.github_repo_url = "https://ghproxy.com/https://api.github.com/repos/Coconut-Aero/calabiyauify-names/contents/src/data/meowQuotes.js"
-        self.data_file_path = self.data_dir / "data" / "meowQuotes.js"
+        self.data_file_path = self.dynamic_data_dir / "meowQuotes.js"
+        
+        # 异步任务引用
+        self.update_task = None
         
         logger.info("✨ [MeowQuotesPlugin] 喵言喵语插件初始化完成喵~")
     
@@ -65,7 +72,7 @@ class MeowQuotesPlugin(Star):
             await self._check_and_update_meow_quotes()
             
             # 启动定时更新任务喵~
-            asyncio.create_task(self._schedule_update_task())
+            self.update_task = asyncio.create_task(self._schedule_update_task())
             
             logger.info("=" * 60)
             logger.info("✅ 喵言喵语插件启动成功喵！")
@@ -84,7 +91,7 @@ class MeowQuotesPlugin(Star):
         quote = self._get_random_quote()
         yield event.plain_result(quote)
     
-    @filter.command("/卡丘表情包")
+    @filter.command("卡丘表情包")
     async def calabiyau_emoji(self, event: AstrMessageEvent):
         """卡丘表情包指令喵~
         喵~喵~喵~随机发送一张可爱的卡丘表情包哦！"""
@@ -96,7 +103,6 @@ class MeowQuotesPlugin(Star):
                 return
             
             # 随机选择一张表情包
-            import random
             selected_emoji = random.choice(emoji_files)
             
             # 发送表情包
@@ -116,8 +122,6 @@ class MeowQuotesPlugin(Star):
                 end = content.rfind(']')
                 if start != -1 and end != -1:
                     array_content = content[start:end+1]
-                    array_content = array_content.replace('"', '"')
-                    import ast
                     self.meow_quotes = ast.literal_eval(array_content)
                     logger.info(f"✅ 从文件加载了 {len(self.meow_quotes)} 条喵言喵语喵~")
                     return
@@ -228,6 +232,9 @@ class MeowQuotesPlugin(Star):
     async def terminate(self):
         """🛑 插件关闭时调用喵~
         喵~喵~喵~插件要关闭啦，下次再见哦！"""
+        # 取消异步任务，避免任务泄漏
+        if self.update_task:
+            self.update_task.cancel()
         logger.info("[MeowQuotesPlugin] 喵言喵语插件已关闭喵~")
 
 
