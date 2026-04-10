@@ -6,9 +6,9 @@
 💕 让你的AstrBot更加可爱喵！
 ═══════════════════════════════════════
 🐱 开发者: 飞翔的死猪
-📧 GitHub: https://github.com/1-20182/astrbot_plugin_miao
+📧 GitHub: https://github.com/1-20182/astrbot_plugin_klbq
 📅 创建时间: 2026
-📝 许可证: AGPL-3.0
+📝 许可证: MIT
 ═══════════════════════════════════════
 
 🎀 这是喵言喵语插件的入口文件，主要负责处理QQ命令功能喵~

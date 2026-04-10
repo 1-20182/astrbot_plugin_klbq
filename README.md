@@ -31,12 +31,12 @@
 
 ## 📄 许可证
 
-本项目采用 GNU GPL-3.0 许可证开源喵~
+本项目采用 MIT 许可证开源喵~
 
 ## 🌸 开发者
 
 - **开发者**：飞翔的死猪
-- **GitHub**：[https://github.com/1-20182/astrbot_plugin_miao](https://github.com/1-20182/astrbot_plugin_miao)
+- **GitHub**：[https://github.com/1-20182/astrbot_plugin_klbq](https://github.com/1-20182/astrbot_plugin_klbq)
 
 ## 🎀 致谢
 
