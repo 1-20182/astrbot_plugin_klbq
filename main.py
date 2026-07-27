@@ -18,7 +18,6 @@ import asyncio
 import random
 import aiohttp
 import json
-import ast
 import base64
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -34,30 +33,30 @@ class MeowQuotesPlugin(Star):
     💕 随机显示卡丘猫娘经典语录喵~
     💕 喵~喵~喵~可爱的猫娘语录等你来发现哦！
     """
-    
+
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
         self.context = context
         self.config = config or {}
-        
+
         # 数据目录
         self.data_dir = Path(__file__).parent
-        # 使用框架提供的数据目录存储动态数据
-        self.dynamic_data_dir = StarTools.get_data_dir(self)
-        
+        # 使用框架提供的数据目录存储动态数据（传入插件名字符串，不能传 self）
+        self.dynamic_data_dir = StarTools.get_data_dir("astrbot_plugin_klbq")
+
         # 喵言喵语数据
         self.meow_quotes = []
-        
+
         # 同步更新相关
         self.last_update_time = None
         self.update_interval = timedelta(hours=1)  # 每小时检查一次更新
-        # 使用国内加速站访问GitHub API
-        self.github_repo_url = "https://ghproxy.com/https://api.github.com/repos/Coconut-Aero/calabiyauify-names/contents/src/data/meowQuotes.js"
+        # 直接访问 GitHub API，避免使用不稳定的代理服务
+        self.github_repo_url = "https://api.github.com/repos/Coconut-Aero/calabiyauify-names/contents/src/data/meowQuotes.js"
         self.data_file_path = self.dynamic_data_dir / "meowQuotes.js"
-        
+
         # 异步任务引用
         self.update_task = None
-        
+
         logger.info("✨ [MeowQuotesPlugin] 喵言喵语插件初始化完成喵~")
     
     async def initialize(self):
@@ -115,17 +114,23 @@ class MeowQuotesPlugin(Star):
         """加载喵言喵语数据喵~
         喵~喵~喵~开始加载可爱的猫娘语录啦！"""
         try:
-            quotes_path = self.data_dir / "data" / "meowQuotes.js"
+            # 优先从动态数据目录加载（更新后的数据保存在这里）
+            quotes_path = self.data_file_path
+            if not quotes_path.exists():
+                # 回退到插件自带的原始数据文件
+                quotes_path = self.data_dir / "data" / "meowQuotes.js"
+
             if quotes_path.exists():
                 content = quotes_path.read_text(encoding='utf-8')
                 start = content.find('[')
                 end = content.rfind(']')
                 if start != -1 and end != -1:
                     array_content = content[start:end+1]
-                    self.meow_quotes = ast.literal_eval(array_content)
+                    # 数据文件中的字符串均为双引号包裹，与 JSON 兼容
+                    self.meow_quotes = json.loads(array_content)
                     logger.info(f"✅ 从文件加载了 {len(self.meow_quotes)} 条喵言喵语喵~")
                     return
-            
+
             logger.warning("⚠️  未找到meowQuotes.js文件，使用内置数据喵~")
             self.meow_quotes = [
                 "错了喵！！错了喵！别捅我喵！我变猫娘给你撅，不要捅我了喵！",
@@ -173,9 +178,13 @@ class MeowQuotesPlugin(Star):
     async def _schedule_update_task(self):
         """定时检查更新任务喵~
         喵~喵~喵~定期检查GitHub仓库的更新哦！"""
-        while True:
-            await asyncio.sleep(3600)  # 每小时检查一次
-            await self._check_and_update_meow_quotes()
+        try:
+            while True:
+                await asyncio.sleep(3600)  # 每小时检查一次
+                await self._check_and_update_meow_quotes()
+        except asyncio.CancelledError:
+            # 插件被卸载/重载时正常退出
+            pass
     
     async def _check_and_update_meow_quotes(self):
         """检查并更新喵言喵语数据喵~
@@ -216,14 +225,14 @@ class MeowQuotesPlugin(Star):
                         data = await response.json()
                         # 解码base64内容喵~
                         content = base64.b64decode(data['content']).decode('utf-8')
-                        
+
                         # 解析数据喵~
                         start = content.find('[')
                         end = content.rfind(']')
                         if start != -1 and end != -1:
                             array_content = content[start:end+1]
-                            # 解析数组内容喵~
-                            quotes = ast.literal_eval(array_content)
+                            # 数据文件中的字符串均为双引号包裹，与 JSON 兼容
+                            quotes = json.loads(array_content)
                             return quotes
         except Exception as e:
             logger.error(f"❌ [MeowQuotesPlugin] 下载数据失败: {e}")
@@ -233,8 +242,12 @@ class MeowQuotesPlugin(Star):
         """🛑 插件关闭时调用喵~
         喵~喵~喵~插件要关闭啦，下次再见哦！"""
         # 取消异步任务，避免任务泄漏
-        if self.update_task:
+        if self.update_task and not self.update_task.done():
             self.update_task.cancel()
+            try:
+                await self.update_task
+            except asyncio.CancelledError:
+                pass
         logger.info("[MeowQuotesPlugin] 喵言喵语插件已关闭喵~")
 
 
