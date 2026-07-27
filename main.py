@@ -193,9 +193,9 @@ class MeowQuotesPlugin(Star):
             # 检查是否到了更新时间
             if self.last_update_time and datetime.now() - self.last_update_time < self.update_interval:
                 return
-            
+
             logger.info("🔍 [MeowQuotesPlugin] 检查喵言喵语数据更新喵~")
-            
+
             # 下载最新数据
             new_quotes = await self._download_meow_quotes()
             if new_quotes:
@@ -205,21 +205,24 @@ class MeowQuotesPlugin(Star):
                     f.write('/* =========================\n  喵言喵语数据\n  ========================= */\n\nexport const meowQuotes = ')
                     f.write(json.dumps(new_quotes, ensure_ascii=False, indent=2))
                     f.write(';')
-                
+
                 # 重新加载数据
                 await self._load_meow_quotes()
                 self.last_update_time = datetime.now()
                 logger.info(f"✅ [MeowQuotesPlugin] 喵言喵语数据更新成功喵！现在有 {len(self.meow_quotes)} 条语录喵~")
             else:
-                logger.info("ℹ️  [MeowQuotesPlugin] 喵言喵语数据已是最新喵~")
+                # 下载失败或返回为空时，记录为本次已尝试，避免短时间内反复重试
+                self.last_update_time = datetime.now()
+                logger.warning("⚠️  [MeowQuotesPlugin] 暂时无法获取最新喵言喵语数据，本次跳过更新喵~")
         except Exception as e:
             logger.error(f"❌ [MeowQuotesPlugin] 检查更新失败: {e}")
-    
+
     async def _download_meow_quotes(self) -> list:
         """从GitHub下载最新的喵言喵语数据喵~
         喵~喵~喵~从GitHub仓库获取最新的猫娘语录哦！"""
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=15)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(self.github_repo_url) as response:
                     if response.status == 200:
                         data = await response.json()
